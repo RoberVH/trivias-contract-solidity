@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+// SPDX-License-Identifier: MIT
 
 /**
  * @title TriviasContract 
@@ -8,9 +7,11 @@ pragma solidity ^0.8.13;
  * @author Roberto Vicuña
  * @notice 
  */
+pragma solidity ^0.8.13;
 
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract TriviasContract {
+contract TriviasContract is ERC20{
     
     error NotOwner();
     error NoEnoughTimePassed();
@@ -44,7 +45,7 @@ contract TriviasContract {
         _;
     }
 
-    constructor() {
+  constructor(string memory name, string memory symbol) ERC20(name, symbol) {
         owner=msg.sender;
         solutions[0] = ["C", "A", "C", "B", "B"];
         solutions[1] = ["A", "D", "A", "D", "B"];
@@ -54,6 +55,16 @@ contract TriviasContract {
         solutions[5] = ["B", "B", "C", "C", "A"];
         i_oneDay = 86400;   // 1 day in Unix epoch
         active = true;
+    }
+
+    // Function to mint tokens ERC-20
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+
+      // Function to check the ERC-20 balance of a specific account
+    //function balanceOf(address account) public view override returns (uint256) {
+     //   return super.balanceOf(account);
     }
 
     function giveFaucet(address _userAddress) external onlyOwner whenActive  {
