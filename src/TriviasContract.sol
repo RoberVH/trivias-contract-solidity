@@ -10,7 +10,7 @@
 pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "forge-std/Test.sol";
+
 
 contract TriviasContract is ERC20{
     
@@ -27,6 +27,7 @@ contract TriviasContract is ERC20{
     uint8 constant  NUMBER_TRIVIAS=5; // number of  trivias
     uint256 constant  FAUCET_GRANT=0.001 ether; // Ethereums to send from Faucet contrat
     uint8 constant  TOKENS_GRANT=10; // Number of contracts tokens to grant on each correctlye trivia answered
+    uint256 constant ONE_DAY=86400;
 
 
     uint256 public immutable i_oneDay;     
@@ -40,7 +41,8 @@ contract TriviasContract is ERC20{
     }
     
     string[5][6] private solutions;
-    string[6] private solutionsHash;
+    // string[6] private solutionsHash;
+    bytes32[6] private solutionsHash;
 
     // keep track of which trivias has the address  solved
     mapping(address => uint8[]) private solvedTrivias;
@@ -59,27 +61,30 @@ contract TriviasContract is ERC20{
 
   constructor(string memory name, string memory symbol) ERC20(name, symbol) {
         owner=msg.sender;
-        solutions[0] = ["C", "A", "C", "B", "B"]; solutionsHash[0] ="0x9598dbcbd83ef19c37403e5502aafc4eb365e222df5d75c53c17fe22f6822bee";
-        solutions[1] = ["A", "D", "A", "D", "B"]; solutionsHash[1] ="0x04cf229431d921cec0b67ec82d5d0c6bd49f826b62665ebd201eb9562a33fde0";
-        solutions[2] = ["A", "B", "B", "B", "A"]; solutionsHash[2] ="0x02f9a28b2ddc736cac90e57e8bcc6fe5b38588b5737b9de41516826b6fa3d8a8";
-        solutions[3] = ["C", "B", "C", "B", "C"]; solutionsHash[3] ="0xee1421cb94aeddf0678f494295468373d934c53bd3ccf5b2adcd17603b720c9b";
-        solutions[4] = ["B", "B", "C", "C", "A"]; solutionsHash[4] ="0x7edb8cbb43220aabf89e76e0527679bdf7d7e86df257082e57a02e83803e720f";
-        solutions[5] = ["B", "B", "C", "C", "A"]; solutionsHash[5] ="0x480eeff190b1da1d3fc451596c9f086abef656466ac7cf84b302442f16fe7216";
+        solutionsHash[0] =0xd8dbc5180fdff1b4d6b9c00750ab421a845f6550c5d7ceac8dc65ea12b601a8b;
+        solutionsHash[1] =0x1d5d77da36ac7b28f08eee422f4086c1b300b0153527284c5988a113fe1f0cb2;
+        solutionsHash[2] =0x02f9a28b2ddc736cac90e57e8bcc6fe5b38588b5737b9de41516826b6fa3d8a8;
+        solutionsHash[3] =0xee1421cb94aeddf0678f494295468373d934c53bd3ccf5b2adcd17603b720c9b;
+        solutionsHash[4] =0x7edb8cbb43220aabf89e76e0527679bdf7d7e86df257082e57a02e83803e720f;
+        solutionsHash[5] =0x480eeff190b1da1d3fc451596c9f086abef656466ac7cf84b302442f16fe7216;
 
-        i_oneDay = 86400;   // 1 day in Unix epoch
+        i_oneDay = ONE_DAY;   // 1 day in Unix epoch
         active = true;
     }
+
+
+    // Getters
+
+    function getUserSolvedTrivias(address userAddress) external view returns(uint8[] memory){
+        return solvedTrivias[userAddress];
+    }
+
 
     // Function to mint tokens ERC-20
     // is called when user has answered correctly a trivia
     function mint(address to, uint256 amount) private  {
         _mint(to, amount);
     }
-
-      // Function to check the ERC-20 balance of a specific account
-    //function balanceOf(address account) public view override returns (uint256) {
-     //   return super.balanceOf(account);
-   // }
 
     function giveFaucet(address _userAddress) external onlyOwner whenActive  {
         if (FaucetRegistry[_userAddress] == 0) {
@@ -88,7 +93,7 @@ contract TriviasContract is ERC20{
             transferCrypto(payable(_userAddress));
         } else {
             // recurrent user, check time restriction (1 day has to have passed to request more crypto)
-            if (FaucetRegistry[_userAddress] > (block.timestamp +  i_oneDay)) {
+            if (FaucetRegistry[_userAddress] +  i_oneDay <= (block.timestamp )) {
                 // ok renew to current time the time restriction and transfer the crypto
                 FaucetRegistry[_userAddress] = block.timestamp;
                 transferCrypto(payable(_userAddress));
@@ -107,18 +112,13 @@ contract TriviasContract is ERC20{
             }
     }
 
-// user send answers array of indexTrivia trivia to check if correct. 
-// if correct and hasn't been answered before, grant 10 tokes and register it's been answered
-    //function checkAnswer(uint8 indexTrivia,  string[] memory solution) external whenActive returns (bool) {
+// checkAnswer 
+//      user send answers nad indexTrivia trivia to check if correct. 
+//      if correct and hasn't been answered before, grant 10 tokes and register it's been answered
     function checkAnswer(uint8 indexTrivia,  string memory solution) external whenActive returns (bool) {
-        console.log('hash del param recibido',keccak256(abi.encodePacked(solution)));
-        console.log('bytes de sol almacenada', stringToBytes32(solutionsHash[indexTrivia]));
-        // for(uint8 i=0; i < NUMBER_ANSWERS; i++ ) {
-           //if (keccak256(abi.encodePacked(solution[i])) != keccak256(abi.encodePacked(solutions[indexTrivia][i]))) {
-           if (keccak256(abi.encodePacked(solution)) != stringToBytes32(solutionsHash[indexTrivia])) {
+           if (keccak256(abi.encodePacked(solution)) != solutionsHash[indexTrivia]) {
                 return false;
             }
-        // }
         uint8[] memory userSolvedTrivias = solvedTrivias[msg.sender];
         uint8 totalSolved = uint8(userSolvedTrivias.length);
         for (uint8 i=0; i< totalSolved; i++) {
@@ -152,16 +152,4 @@ contract TriviasContract is ERC20{
    function deactivate() external onlyOwner {
         active = false;
     }
-
- function stringToBytes32(string memory source) public pure returns (bytes32 result) {
-        bytes memory tempEmptyStringTest = bytes(source);
-        if (tempEmptyStringTest.length == 0) {
-            return 0x0;
-        }
-
-        assembly {
-            result := mload(add(source, 32))
-        }
-    }
-
-   }
+}

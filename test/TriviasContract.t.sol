@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/TriviasContract.sol"; // Asegúrate de que la ruta sea correcta
+import "forge-std/console.sol";
 
 
 contract TriviasContractTest is Test {
@@ -10,6 +11,7 @@ contract TriviasContractTest is Test {
     address public owner;
     address public user1;
     address public user2;
+    uint256 constant ONE_DAYPLUS=90000;
 
     function setUp() public {
      owner = address(this);
@@ -27,6 +29,8 @@ contract TriviasContractTest is Test {
         vm.stopPrank();
     }
 
+
+
     function testInitialState() public view {
         assertEq(triviasContract.name(), "TriviaToken");
         assertEq(triviasContract.symbol(), "TRV");
@@ -40,6 +44,36 @@ function testGiveFaucet() public {
     assertEq(address(triviasContract).balance, initialBalance - 0.001 ether);
 }
 
+function testAllowFaucetAfterOneDayPassed() public {
+    uint256 initialBalance = address(triviasContract).balance;
+    vm.prank(owner);
+    triviasContract.giveFaucet(user1);
+    assertEq(user1.balance, 0.001 ether);
+    assertEq(address(triviasContract).balance, initialBalance - 0.001 ether);
+    
+    // Simulate a day has passed (86400 segundos)
+    vm.warp(block.timestamp + ONE_DAYPLUS);
+
+    // try again to get faucet
+      vm.prank(owner);
+      triviasContract.giveFaucet(user1);
+    // Verify user  received another 0.001 ether
+    assertEq(user1.balance, 0.002 ether);
+    assertEq(address(triviasContract).balance, initialBalance - 0.002 ether);
+}
+
+function testDenyFaucetifNotADaypassed() public {
+    uint256 initialBalance = address(triviasContract).balance;
+    vm.prank(owner);
+    triviasContract.giveFaucet(user1);
+    assertEq(user1.balance, 0.001 ether);
+    assertEq(address(triviasContract).balance, initialBalance - 0.001 ether);
+    // try again to get faucet
+      vm.prank(owner);
+      vm.expectRevert(TriviasContract.NoEnoughTimePassed.selector);
+      triviasContract.giveFaucet(user1);
+}
+
     function testGiveFaucetOnlyOwner() public {
         vm.prank(user1);
         vm.expectRevert(TriviasContract.NotOwner.selector);
@@ -49,11 +83,6 @@ function testGiveFaucet() public {
     function testCheckAnswer() public {
         //string[] memory correctAnswer = new string[](5);
         string memory correctAnswer = '0CACBB';
-        // correctAnswer[0] = "C";
-        // correctAnswer[1] = "A";
-        // correctAnswer[2] = "C";
-        // correctAnswer[3] = "B";
-        // correctAnswer[4] = "B";
 
         vm.prank(user1);
         bool result = triviasContract.checkAnswer(0, correctAnswer);
@@ -61,15 +90,18 @@ function testGiveFaucet() public {
         assertEq(triviasContract.balanceOf(user1), 10);
     }
 
+    function testAllAnswers() public {
+        checkAnswer(user1, 0, '0CACBB', 10);
+        checkAnswer(user1, 1, '1ADADB', 20);
+        checkAnswer(user1, 2, '2ABBBA', 30);
+        checkAnswer(user1, 3, '3CBCBC', 40);
+        checkAnswer(user1, 4, '4BBCCA', 50);
+        checkAnswer(user1, 5, '5BBCCA', 60);
+    }
+    
     function testCheckAnswerIncorrect() public {
         //string[] memory incorrectAnswer = new string[](5);
         string memory incorrectAnswer = '0AACBB';
-
-        // incorrectAnswer[0] = "A";
-        // incorrectAnswer[1] = "A";
-        // incorrectAnswer[2] = "A";
-        // incorrectAnswer[3] = "A";
-        // incorrectAnswer[4] = "A";
 
         vm.prank(user1);
         bool result = triviasContract.checkAnswer(0, incorrectAnswer);
@@ -77,21 +109,58 @@ function testGiveFaucet() public {
         assertEq(triviasContract.balanceOf(user1), 0);
     }
 
-    function testCannotSolveSameTriviaAgain() public {
-//        string[] memory correctAnswer = new string[](5);
+    function testTokenTransfer() public {
         string memory correctAnswer = '0CACBB';
-        // correctAnswer[0] = "C";
-        // correctAnswer[1] = "A";
-        // correctAnswer[2] = "C";
-        // correctAnswer[3] = "B";
-        // correctAnswer[4] = "B";
+        // first get some tokens
+        vm.prank(user1);
+        bool result = triviasContract.checkAnswer(0, correctAnswer);
+        assertTrue(result);
+        assertEq(triviasContract.balanceOf(user1), 10);
+        vm.prank(user1);
+        bool transferResult = triviasContract.transfer(user2, 10);
+        assertTrue(transferResult);
+        // Verificar los saldos después de la transferencia
+        assertEq(triviasContract.balanceOf(user1), 0);
+        assertEq(triviasContract.balanceOf(user2), 10);
+    }
 
+
+    function testCannotSolveSameTriviaAgain() public {
+        string memory correctAnswer = '0CACBB';
         vm.startPrank(user1);
         triviasContract.checkAnswer(0, correctAnswer);
         vm.expectRevert(TriviasContract.TriviaAlreadySolved.selector);
         triviasContract.checkAnswer(0, correctAnswer);
         vm.stopPrank();
     }
+
+function testGetterUserSolvedTrivias() public {
+    answerAllTrivias(user1);
+    uint8[] memory triviasSolved = triviasContract.getUserSolvedTrivias(user1);
+    uint8[] memory expectedTrivias = new uint8[](5);
+    expectedTrivias[0]=0; expectedTrivias[1]=1;expectedTrivias[2]=3;expectedTrivias[3]=4;expectedTrivias[4]=5;
+    assertEq(triviasSolved.length, expectedTrivias.length, "Array lengths do not match");
+     for (uint i = 0; i < expectedTrivias.length; i++) {
+        assertEq(triviasSolved[i], expectedTrivias[i]);
+    }
+}
+
+
+    function answerAllTrivias(address userAddress) private {
+        checkAnswer(userAddress, 0, '0CACBB', 10);
+        checkAnswer(userAddress, 1, '1ADADB', 20);
+        checkAnswer(userAddress, 3, '3CBCBC', 30);
+        checkAnswer(userAddress, 4, '4BBCCA', 40);
+        checkAnswer(userAddress, 5, '5BBCCA', 50);
+        
+    }
+
+    function checkAnswer(address user, uint8 triviaIndex, string memory correctAnswer, uint256 expectedBalance) private  {
+        vm.prank(user);
+        bool result = triviasContract.checkAnswer(triviaIndex, correctAnswer);
+        assertTrue(result);
+        assertEq(triviasContract.balanceOf(user), expectedBalance);
+}
 
 function testWithdraw() public {
     uint256 initialContractBalance = address(triviasContract).balance;

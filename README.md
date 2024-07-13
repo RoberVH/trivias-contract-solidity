@@ -1,17 +1,16 @@
-## Foundry
+## TriviasContract
+### Contract for Trivia game for the Course Introduccion a Blokcchain
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+- It controls if Trivia is corrected solved. 
+- Acruee result for users
+- Grants contract's 10 tokens TTS (Trivia Tokens Game) for each trivia solved
 
-Foundry consists of:
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+#### **Author:** Roberto Vicuña
+####  **Date:** July 2024
 
-## Documentation
-
-https://book.getfoundry.sh/
+ Created on Foundry environment
+ Deploy to Sepolia Network
 
 ## Usage
 
@@ -48,7 +47,8 @@ $ anvil
 ### Deploy
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+$ source .env
+$ forge script script/DeployTriviasContract.s.sol:DeployTriviasContract --rpc-url $ALCHEMY_SEPOLIA_URL --private-key $PRIVATE_KEY --broadcast
 ```
 
 ### Cast
