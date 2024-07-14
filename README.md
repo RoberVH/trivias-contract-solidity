@@ -2,7 +2,8 @@
 ### Contract for Trivia game for the Course Introduccion a Blokcchain
 
 - It controls if Trivia is corrected solved. 
-- Acruee result for users
+- Acruee Trivia result for users accounts
+- Issue 500,000 TTS (trivia Tokens) Tokens
 - Grants contract's 10 tokens TTS (Trivia Tokens Game) for each trivia solved
 
 
