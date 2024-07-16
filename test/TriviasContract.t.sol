@@ -5,7 +5,6 @@ import "forge-std/Test.sol";
 import "../src/TriviasContract.sol";
 import "forge-std/console.sol";
 
-
 contract TriviasContractTest is Test {
     TriviasContract public triviasContract;
     address public owner;
@@ -98,6 +97,18 @@ contract TriviasContractTest is Test {
         vm.prank(user1);
         vm.expectRevert(TriviasContract.NotOwner.selector);
         triviasContract.giveFaucet(user2);
+    }
+
+    function testNoBalanceOnContract() public {
+        vm.prank(owner);
+        TriviasContract trivias2 = new TriviasContract("TriviaToken1", "TRV2");
+        uint256 balance = address(trivias2).balance;
+        console.log('balance trivias2');
+        console.log(balance);
+        vm.startPrank(owner);
+        vm.expectRevert(TriviasContract.NoEnoughBalanceInContract.selector);
+        trivias2.giveFaucet(user1);
+        vm.stopPrank();
     }
 
     function testNoMoreTokens() public {
