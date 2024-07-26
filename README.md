@@ -49,7 +49,10 @@ $ anvil
 
 ```shell
 $ source .env
+#deploy to SEPOLIA
 $ forge script script/DeployTriviasContract.s.sol:DeployTriviasContract --rpc-url $ALCHEMY_SEPOLIA_URL --private-key $PRIVATE_KEY --broadcast
+#deploy to AMOY
+$ forge script script/DeployTriviasContract.s.sol:DeployTriviasContract --rpc-url $ALCHEMY_AMOY_URL --private-key $PRIVATE_KEY --broadcast
 ```
 
 ### Cast

@@ -92,30 +92,6 @@
   },
   {
     "type": "function",
-    "name": "checkAnswer",
-    "inputs": [
-      {
-        "name": "indexTrivia",
-        "type": "uint8",
-        "internalType": "uint8"
-      },
-      {
-        "name": "solution",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "deactivate",
     "inputs": [],
     "outputs": [],
@@ -143,6 +119,19 @@
         "name": "",
         "type": "uint8",
         "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getFaucetGrant",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -217,6 +206,37 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "scoreAnswer",
+    "inputs": [
+      {
+        "name": "indexTrivia",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "solution",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setFaucetGrant",
+    "inputs": [
+      {
+        "name": "_faucetGrant",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -372,6 +392,11 @@
       }
     ],
     "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AnsweredIncorrect",
+    "inputs": []
   },
   {
     "type": "error",

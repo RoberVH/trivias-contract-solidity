@@ -14,6 +14,7 @@ contract TriviasContractTest is Test {
     uint8 constant TOKENS_GRANT = 10;
     uint256 private constant TOKEN_UNIT = 1e18; // 10 ** 18; // for efficiency on tokens operations
     uint256 private constant INITIAL_SUPPLY = 500000 * TOKEN_UNIT;
+    uint256 private faucetGrant = 0.1 ether; // Ethereums to send from Faucet contrat
 
     function setUp() public {
         owner = address(this);
@@ -41,40 +42,35 @@ contract TriviasContractTest is Test {
         uint256 initialBalance = address(triviasContract).balance;
         vm.prank(owner);
         triviasContract.giveFaucet(user1);
-        assertEq(user1.balance, 0.001 ether);
+        assertEq(user1.balance, faucetGrant);
         assertEq(
             address(triviasContract).balance,
-            initialBalance - 0.001 ether
+            initialBalance - faucetGrant
         );
     }
 
     function testAllowFaucetAfterOneDayPassed() public {
         uint256 initialBalance = address(triviasContract).balance;
-        console.log("Bal Inicial");
-        console.log(initialBalance);
 
         vm.prank(owner);
         triviasContract.giveFaucet(user1);
-        assertEq(user1.balance, 0.001 ether);
+        assertEq(user1.balance, faucetGrant);
         assertEq(
             address(triviasContract).balance,
-            initialBalance - 0.001 ether
+            initialBalance - faucetGrant
         );
 
         // Simulate a day has passed (more than 86400 seconds)
         vm.warp(block.timestamp + ONE_DAYPLUS);
 
-        // try again to get faucet
-        uint256 secondBalance = address(triviasContract).balance;
-        console.log("secondBalance");
-        console.log(secondBalance);
+        // try again to get from faucet
         vm.prank(owner);
         triviasContract.giveFaucet(user1);
-        // Verify user  received another 0.001 ether
-        assertEq(user1.balance, 0.002 ether);
+        // Verify user  received another faucetGrant
+        assertEq(user1.balance, 2 * faucetGrant);
         assertEq(
             address(triviasContract).balance,
-            initialBalance - 0.002 ether
+            initialBalance - (2 * faucetGrant)
         );
     }
 
@@ -82,10 +78,10 @@ contract TriviasContractTest is Test {
         uint256 initialBalance = address(triviasContract).balance;
         vm.prank(owner);
         triviasContract.giveFaucet(user1);
-        assertEq(user1.balance, 0.001 ether);
+        assertEq(user1.balance, faucetGrant);
         assertEq(
             address(triviasContract).balance,
-            initialBalance - 0.001 ether
+            initialBalance - faucetGrant
         );
         // try again to get faucet
         vm.prank(owner);
@@ -102,9 +98,6 @@ contract TriviasContractTest is Test {
     function testNoBalanceOnContract() public {
         vm.prank(owner);
         TriviasContract trivias2 = new TriviasContract("TriviaToken1", "TRV2");
-        uint256 balance = address(trivias2).balance;
-        console.log('balance trivias2');
-        console.log(balance);
         vm.startPrank(owner);
         vm.expectRevert(TriviasContract.NoEnoughBalanceInContract.selector);
         trivias2.giveFaucet(user1);
@@ -119,23 +112,21 @@ contract TriviasContractTest is Test {
         // now triviasCOntract tokens balance is zero
         vm.prank(user1);
         vm.expectRevert();
-        triviasContract.checkAnswer(0, "0CACBB");
+        triviasContract.scoreAnswer(0, "0CACBB");
     }
 
     function testCheckAnswer() public {
         //string[] memory correctAnswer = new string[](5);
-        string memory correctAnswer = "0CACBB";
-
+        string memory correctAnswer = "0BACBB";
         vm.prank(user1);
-        bool result = triviasContract.checkAnswer(0, correctAnswer);
-        assertTrue(result);
+        triviasContract.scoreAnswer(0, correctAnswer);
         assertEq(triviasContract.balanceOf(user1), TOKENS_GRANT * TOKEN_UNIT);
     }
 
     function testAllAnswers() public {
-        checkAnswer(user1, 0, "0CACBB", 1 * TOKENS_GRANT * TOKEN_UNIT);
-        checkAnswer(user1, 1, "1ADADB", 2 * TOKENS_GRANT * TOKEN_UNIT);
-        checkAnswer(user1, 2, "2ABBBA", 3 * TOKENS_GRANT * TOKEN_UNIT);
+        checkAnswer(user1, 0, "0BACBB", 1 * TOKENS_GRANT * TOKEN_UNIT);
+        checkAnswer(user1, 1, "1ACADB", 2 * TOKENS_GRANT * TOKEN_UNIT);
+        checkAnswer(user1, 2, "2BBBBA", 3 * TOKENS_GRANT * TOKEN_UNIT);
         checkAnswer(user1, 3, "3CBCBC", 4 * TOKENS_GRANT * TOKEN_UNIT);
         checkAnswer(user1, 4, "4BBCCA", 5 * TOKENS_GRANT * TOKEN_UNIT);
         checkAnswer(user1, 5, "5BBCCA", 6 * TOKENS_GRANT * TOKEN_UNIT);
@@ -146,17 +137,16 @@ contract TriviasContractTest is Test {
         string memory incorrectAnswer = "0AACBB";
 
         vm.prank(user1);
-        bool result = triviasContract.checkAnswer(0, incorrectAnswer);
-        assertFalse(result);
+        vm.expectRevert(TriviasContract.AnsweredIncorrect.selector);
+        triviasContract.scoreAnswer(0, incorrectAnswer);
         assertEq(triviasContract.balanceOf(user1), 0);
     }
 
     function testTokenTransfer() public {
-        string memory correctAnswer = "0CACBB";
+        string memory correctAnswer = "0BACBB";
         // first get some tokens
         vm.prank(user1);
-        bool result = triviasContract.checkAnswer(0, correctAnswer);
-        assertTrue(result);
+        triviasContract.scoreAnswer(0, correctAnswer);
         assertEq(triviasContract.balanceOf(user1), TOKENS_GRANT * TOKEN_UNIT);
         vm.prank(user1);
         bool transferResult = triviasContract.transfer(
@@ -174,11 +164,11 @@ contract TriviasContractTest is Test {
     // }
 
     function testCannotSolveSameTriviaAgain() public {
-        string memory correctAnswer = "0CACBB";
+        string memory correctAnswer = "0BACBB";
         vm.startPrank(user1);
-        triviasContract.checkAnswer(0, correctAnswer);
+        triviasContract.scoreAnswer(0, correctAnswer);
         vm.expectRevert(TriviasContract.TriviaAlreadySolved.selector);
-        triviasContract.checkAnswer(0, correctAnswer);
+        triviasContract.scoreAnswer(0, correctAnswer);
         vm.stopPrank();
     }
 
@@ -187,12 +177,13 @@ contract TriviasContractTest is Test {
         uint8[] memory triviasSolved = triviasContract.getUserSolvedTrivias(
             user1
         );
-        uint8[] memory expectedTrivias = new uint8[](5);
+        uint8[] memory expectedTrivias = new uint8[](6);
         expectedTrivias[0] = 0;
         expectedTrivias[1] = 1;
-        expectedTrivias[2] = 3;
-        expectedTrivias[3] = 4;
-        expectedTrivias[4] = 5;
+        expectedTrivias[2] = 2;
+        expectedTrivias[3] = 3;
+        expectedTrivias[4] = 4;
+        expectedTrivias[5] = 5;
         assertEq(
             triviasSolved.length,
             expectedTrivias.length,
@@ -204,11 +195,12 @@ contract TriviasContractTest is Test {
     }
 
     function answerAllTrivias(address userAddress) private {
-        checkAnswer(userAddress, 0, "0CACBB", 1 * TOKENS_GRANT * TOKEN_UNIT);
-        checkAnswer(userAddress, 1, "1ADADB", 2 * TOKENS_GRANT * TOKEN_UNIT);
-        checkAnswer(userAddress, 3, "3CBCBC", 3 * TOKENS_GRANT * TOKEN_UNIT);
-        checkAnswer(userAddress, 4, "4BBCCA", 4 * TOKENS_GRANT * TOKEN_UNIT);
-        checkAnswer(userAddress, 5, "5BBCCA", 5 * TOKENS_GRANT * TOKEN_UNIT);
+        checkAnswer(userAddress, 0, "0BACBB", 1 * TOKENS_GRANT * TOKEN_UNIT);       // BACBB
+        checkAnswer(userAddress, 1, "1ACADB", 2 * TOKENS_GRANT * TOKEN_UNIT);       // ACADB
+        checkAnswer(userAddress, 2, "2BBBBA", 3 * TOKENS_GRANT * TOKEN_UNIT);       // BBBBA
+        checkAnswer(userAddress, 3, "3CBCBC", 4 * TOKENS_GRANT * TOKEN_UNIT);       // CBCBC
+        checkAnswer(userAddress, 4, "4BBCCA", 5 * TOKENS_GRANT * TOKEN_UNIT);       // BBCCA
+        checkAnswer(userAddress, 5, "5BBCCA", 6 * TOKENS_GRANT * TOKEN_UNIT);       // BBCCA
     }
 
     function checkAnswer(
@@ -218,18 +210,34 @@ contract TriviasContractTest is Test {
         uint256 expectedBalance
     ) private {
         vm.prank(user);
-        bool result = triviasContract.checkAnswer(triviaIndex, correctAnswer);
-        assertTrue(result);
+        triviasContract.scoreAnswer(triviaIndex, correctAnswer);
         assertEq(triviasContract.balanceOf(user), expectedBalance);
+    }
+
+    function testFaucetGrantgetter() public {
+        vm.prank(owner);
+        uint256 granted = triviasContract.getFaucetGrant();
+        assertEq(granted, faucetGrant);
+    }
+
+    function testFaucetGrantsetter() public {
+        vm.prank(owner);
+        triviasContract.setFaucetGrant(uint256(0.9 ether));
+        uint256 granted = triviasContract.getFaucetGrant();
+        assertEq(granted, uint256(0.9 ether));
+    }
+
+    function testrefuseNoOwnersetFaucetGrant() public {
+        vm.prank(user1);
+        vm.expectRevert(TriviasContract.NotOwner.selector);
+        triviasContract.setFaucetGrant(uint256(1 ether));
     }
 
     function testWithdraw() public {
         uint256 initialContractBalance = address(triviasContract).balance;
         uint256 initialOwnerBalance = owner.balance;
-
         vm.prank(owner);
         triviasContract.withdraw();
-
         assertEq(address(triviasContract).balance, 0);
         assertEq(owner.balance, initialOwnerBalance + initialContractBalance);
     }
@@ -242,7 +250,7 @@ contract TriviasContractTest is Test {
         string memory answer = "0CACBB";
         vm.prank(user1);
         vm.expectRevert(TriviasContract.ContractInactive.selector);
-        triviasContract.checkAnswer(0, answer);
+        triviasContract.scoreAnswer(0, answer);
     }
 
     receive() external payable {}
